@@ -48,7 +48,7 @@ public class PathFinding
         );
     }
 
-    public List<(int X, int Y)> GetValidNeighbours(Grid2D grid, int[] position)
+    public List<int[]> GetValidNeighbours(Grid2D grid, int[] position)
     {
         int x = position[0];
         int y = position[1];
@@ -64,7 +64,7 @@ public class PathFinding
             (x + 1, y - 1), (x - 1, y + 1)
         };
 
-        var neighbours = new List <(int X, int Y)>();
+        var neighbours = new List <int[]>();
 
         foreach(var (X, Y) in possibleMoves)
         {
@@ -76,13 +76,13 @@ public class PathFinding
                 0 <= ny && ny < cols && 
                 grid.GetValue(nx, ny) == 0
             )
-                neighbours.Add((X : nx, Y : ny));
+                neighbours.Add([nx, ny]);
         }
 
         return neighbours;
     }
 
-    public void ReconstructPath()
+    public void ReconstructPath(PathNode goalNode)
     {
         
     }
@@ -94,6 +94,40 @@ public class PathFinding
             g : 0, 
             h : CalculateHeuristic(start, goal)
         );
+
+        var openList = new PriorityQueue<int[], double>([(start, startNode.f)]);
+        var openDict = new Dictionary<int[], PathNode>() { {start, startNode} };
+        var closedSet = new HashSet<int[]>();
+
+        while(openList.Count > 0)
+        {
+            int[] currentPos = openList.Dequeue();
+            PathNode currentNode = openDict[currentPos];
+
+            if(currentPos == goal)
+                ReconstructPath(currentNode);
+
+            closedSet.Add(currentPos);
+
+            foreach(var neighbourPos in GetValidNeighbours(grid, currentPos))
+            {
+                if(closedSet.Contains(neighbourPos))
+                    continue;
+
+                double tentativeG = currentNode.g + 
+                    CalculateHeuristic(currentPos, neighbourPos);
+                
+                if(!openDict.ContainsKey(neighbourPos))
+                {
+                    PathNode neighbour = CreateNode(
+                        position : neighbourPos,
+                        g : tentativeG,
+                        h : CalculateHeuristic(neighbourPos, goal)
+                        //parent : currentNode
+                    );
+                }
+            }
+        }
     }
 }
 
