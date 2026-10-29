@@ -1,140 +1,27 @@
-﻿public class Grid2D(int width, int height)
-{
-    public int[,] cells = new int[width, height];
-
-    public void SetValue(int x, int y, int value)
-    {
-        cells[x, y] = value;
-    }
-
-    public int GetValue(int x, int y)
-    {
-        return cells[x, y];
-    }
-}
-
-public class PathNode
-{
-    public required int[] position;
-    public double g;
-    public double h;
-    public double f;
-    public required Dictionary<int, int>? parent;
-}
-
-public class PathFinding
-{
-    public PathNode CreateNode(
-        int[] position,
-        Dictionary<int, int>? parent = null, 
-        double g = float.PositiveInfinity,
-        double h = 0
-    )
-    {
-        return new PathNode
-        { 
-            position = position, 
-            g = g,
-            h = h,
-            f = g + h,
-            parent = parent
-        };
-    }
-
-    public double CalculateHeuristic(int[] posOne, int[] posTwo)
-    {
-        return Math.Sqrt(
-            Math.Pow((posTwo[0] - posOne[0]), 2) + Math.Pow((posTwo[1] - posOne[1]), 2)
-        );
-    }
-
-    public List<int[]> GetValidNeighbours(Grid2D grid, int[] position)
-    {
-        int x = position[0];
-        int y = position[1];
-
-        int rows = grid.cells.GetLength(0);
-        int cols = grid.cells.GetLength(1);
-
-        var possibleMoves = new (int X, int Y)[]
-        {
-            (x + 1, y),     (x - 1, y),     // Right, Left
-            (x,     y + 1), (x,     y - 1), // Up, Down
-            (x + 1, y + 1), (x - 1, y - 1), // Diagonal moves
-            (x + 1, y - 1), (x - 1, y + 1)
-        };
-
-        var neighbours = new List <int[]>();
-
-        foreach(var (X, Y) in possibleMoves)
-        {
-            int nx = X;
-            int ny = Y;
-
-            if (
-                0 <= nx && nx < rows && 
-                0 <= ny && ny < cols && 
-                grid.GetValue(nx, ny) == 0
-            )
-                neighbours.Add([nx, ny]);
-        }
-
-        return neighbours;
-    }
-
-    public void ReconstructPath(PathNode goalNode)
-    {
-        
-    }
-
-    public void FindPath(Grid2D grid, int[] start, int[] goal)
-    {
-        PathNode startNode = CreateNode(
-            position : start, 
-            g : 0, 
-            h : CalculateHeuristic(start, goal)
-        );
-
-        var openList = new PriorityQueue<int[], double>([(start, startNode.f)]);
-        var openDict = new Dictionary<int[], PathNode>() { {start, startNode} };
-        var closedSet = new HashSet<int[]>();
-
-        while(openList.Count > 0)
-        {
-            int[] currentPos = openList.Dequeue();
-            PathNode currentNode = openDict[currentPos];
-
-            if(currentPos == goal)
-                ReconstructPath(currentNode);
-
-            closedSet.Add(currentPos);
-
-            foreach(var neighbourPos in GetValidNeighbours(grid, currentPos))
-            {
-                if(closedSet.Contains(neighbourPos))
-                    continue;
-
-                double tentativeG = currentNode.g + 
-                    CalculateHeuristic(currentPos, neighbourPos);
-                
-                if(!openDict.ContainsKey(neighbourPos))
-                {
-                    PathNode neighbour = CreateNode(
-                        position : neighbourPos,
-                        g : tentativeG,
-                        h : CalculateHeuristic(neighbourPos, goal)
-                        //parent : currentNode
-                    );
-                }
-            }
-        }
-    }
-}
+﻿using ScottPlot;
 
 public class Program
 {
     public static void Main()
     {
+        PathFinding pathFinding = new();
+        MakeGrid makeGrid = new();
 
+        Grid2D grid = makeGrid.Generate();
+
+        (int y, int x) startPos = (y : 5, x : 7);
+        (int y, int x) goalPos = (y : 15, x : 18);
+
+        List<(int y, int x)> path = pathFinding.FindPath(grid, startPos, goalPos);
+
+        Plot visual = new();
+
+        int[] ys = [.. path.Select(p => p.y)];
+        int[] xs = [.. path.Select(p => p.x)];
+
+        visual.Add.Scatter(xs, ys);
+        visual.SavePng("path.png", 600, 500);
+
+        Console.WriteLine("Chart successfully saved to path.png!");
     }
 }
